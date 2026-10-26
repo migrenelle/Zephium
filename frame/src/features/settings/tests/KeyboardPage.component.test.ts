@@ -6,6 +6,8 @@ import type { KeymapEntry, LauncherTrigger } from "$shared/ipc/bindings";
 import { keymap } from "$domain/keymap";
 import KeyboardPage from "../components/sections/KeyboardPage.svelte";
 
+vi.mock("$shared/platform", () => ({ IS_MAC: false, IS_WINDOWS: true }));
+
 const entry = (id: string, title: string, accelerator: string | null, customized = false) =>
   ({
     id,
@@ -64,19 +66,30 @@ test("records a shortcut, names a conflict, and takes the keys when asked", asyn
     .mockResolvedValueOnce({ kind: "applied" });
   const screen = await render(KeyboardPage);
   const newTab = screen.getByRole("button", { name: "Change the shortcut for New tab" });
-  await expect.element(newTab).toHaveTextContent("⌘T");
+  await expect.element(newTab).toHaveTextContent("WinT");
 
   await newTab.click();
   expect(native.record).toHaveBeenLastCalledWith(true);
-  await userEvent.keyboard("{Meta>}w{/Meta}");
+  window.dispatchEvent(
+    new KeyboardEvent("keydown", {
+      code: "KeyQ",
+      key: "a",
+      ctrlKey: true,
+      shiftKey: true,
+      bubbles: true,
+      cancelable: true,
+    }),
+  );
   await vi.waitFor(() =>
-    expect(native.bind).toHaveBeenLastCalledWith("tab.new", "Cmd+KeyW", false),
+    expect(native.bind).toHaveBeenLastCalledWith("tab.new", "Ctrl+Shift+A", false),
   );
   expect(native.record).toHaveBeenLastCalledWith(false);
   await expect.element(screen.getByText("Already used by Close tab.")).toBeVisible();
 
   await screen.getByRole("button", { name: "Use here" }).click();
-  await vi.waitFor(() => expect(native.bind).toHaveBeenLastCalledWith("tab.new", "Cmd+KeyW", true));
+  await vi.waitFor(() =>
+    expect(native.bind).toHaveBeenLastCalledWith("tab.new", "Ctrl+Shift+A", true),
+  );
   await expect.element(screen.getByText("Already used by Close tab.")).not.toBeInTheDocument();
 
   document.documentElement.dataset.theme = "dark";
