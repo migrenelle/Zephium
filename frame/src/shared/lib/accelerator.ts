@@ -73,7 +73,8 @@ function modifierOf(token: string, mac: boolean): Modifier | null {
 function keyOf(token: string): string {
   const code = /^(?:Key([A-Za-z])|Digit(\d))$/u.exec(token);
   if (code) return (code[1] ?? code[2]!).toUpperCase();
-  if (token.length === 1) return token.toUpperCase();
+  if (/^[A-Za-z]$/u.test(token)) return token.toUpperCase();
+  if (token.length === 1) return token;
   return KEY_ALIASES[token] ?? token;
 }
 
@@ -83,7 +84,7 @@ function parse(accelerator: string, mac: boolean): Parsed | null {
   // "Ctrl++" names the plus key, which shares its cap with "=".
   const plus = text.endsWith("++");
   const tokens = (plus ? text.slice(0, -2) : text).split("+").filter(Boolean);
-  const last = plus ? "=" : tokens.pop();
+  const last = plus ? "+" : tokens.pop();
   if (last === undefined) return null;
   const modifiers = new Set<Modifier>();
   for (const token of tokens) {
@@ -154,18 +155,22 @@ export function acceleratorFrom(event: KeyboardEvent, mac: boolean): string | nu
 const LETTER = /^[a-z]$/iu;
 
 /** A command shortcut as the active Windows layout spells it. WebView2 matches
- *  letters by virtual key, so the physical QWERTY position would turn AZERTY's
- *  A into Q and Z into W. Other platforms and non-letter keys keep their codes. */
+ *  printable keys by the active layout's virtual key, so their physical QWERTY
+ *  positions would turn AZERTY's A into Q, Z into W, and the comma into M.
+ *  Other platforms and keys that do not spell a character keep their codes. */
 export function keymapAcceleratorFrom(
   event: KeyboardEvent,
   mac: boolean,
   windows: boolean,
 ): string | null {
-  const key =
-    windows && typeof event.key === "string" && LETTER.test(event.key)
-      ? event.key.toUpperCase()
-      : event.code;
+  const key = windows ? (layoutKey(event.key) ?? event.code) : event.code;
   return spell(event, mac, key);
+}
+
+function layoutKey(key: string): string | null {
+  if (!key || key.trim() === "" || Array.from(key).length !== 1) return null;
+  if (LETTER.test(key)) return key.toUpperCase();
+  return key;
 }
 
 function spell(event: KeyboardEvent, mac: boolean, key: string): string | null {

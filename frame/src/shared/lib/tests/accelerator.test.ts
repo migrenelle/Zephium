@@ -21,7 +21,8 @@ describe("accelerators", () => {
     expect(acceleratorKeys("CmdOrCtrl+Shift+T", true)).toEqual(["⇧", "⌘", "T"]);
     expect(acceleratorKeys("Cmd+Option+N", true)).toEqual(["⌥", "⌘", "N"]);
     expect(acceleratorKeys("Ctrl+Shift+Enter", false)).toEqual(["Ctrl", "Shift", "↵"]);
-    expect(acceleratorKeys("Ctrl++", false)).toEqual(["Ctrl", "="]);
+    expect(acceleratorKeys("Ctrl++", false)).toEqual(["Ctrl", "+"]);
+    expect(acceleratorKeys("Ctrl+é", false)).toEqual(["Ctrl", "é"]);
     expect(acceleratorKeys("Ctrl+Shift+Tab", true)).toEqual(["⌃", "⇧", "Tab"]);
     expect(acceleratorKeys("Ctrl+Alt+KeyK", true)).toEqual(["⌃", "⌥", "K"]);
     expect(acceleratorKeys("CmdOrCtrl+Shift+Space", false)).toEqual(["Ctrl", "Shift", "Space"]);
@@ -66,7 +67,34 @@ describe("accelerators", () => {
     ).toBe("Ctrl+A");
   });
 
-  it("keeps non-letters and non-Windows recording physical", () => {
+  it("records every printable Windows shortcut from the active keyboard layout", () => {
+    const cases = [
+      ["KeyM", ",", "Ctrl+,"],
+      ["KeyQ", ".", "Ctrl+."],
+      ["KeyW", "-", "Ctrl+-"],
+      ["KeyE", "=", "Ctrl+="],
+      ["KeyR", "[", "Ctrl+["],
+      ["KeyT", "]", "Ctrl+]"],
+      ["KeyY", ";", "Ctrl+;"],
+      ["KeyU", "'", "Ctrl+'"],
+      ["KeyI", "/", "Ctrl+/"],
+      ["KeyO", "\\", "Ctrl+\\"],
+      ["KeyP", "`", "Ctrl+`"],
+      ["Semicolon", "+", "Ctrl++"],
+      ["Space", " ", "Ctrl+Space"],
+      ["Slash", "!", "Ctrl+!"],
+      ["Comma", "?", "Ctrl+?"],
+      ["Digit2", "é", "Ctrl+é"],
+      ["Semicolon", "ù", "Ctrl+ù"],
+    ] as const;
+    for (const [code, key, accelerator] of cases) {
+      expect(keymapAcceleratorFrom(press({ code, key, ctrlKey: true }), false, true)).toBe(
+        accelerator,
+      );
+    }
+  });
+
+  it("keeps physical codes for non-Windows and unsupported layout inputs", () => {
     expect(
       keymapAcceleratorFrom(press({ code: "KeyQ", key: "a", ctrlKey: true }), false, false),
     ).toBe("Ctrl+KeyQ");
@@ -78,9 +106,6 @@ describe("accelerators", () => {
     ).toBe("Ctrl+Space");
     expect(
       keymapAcceleratorFrom(press({ code: "KeyQ", key: "Dead", ctrlKey: true }), false, true),
-    ).toBe("Ctrl+KeyQ");
-    expect(
-      keymapAcceleratorFrom(press({ code: "KeyQ", key: "é", ctrlKey: true }), false, true),
     ).toBe("Ctrl+KeyQ");
     expect(
       keymapAcceleratorFrom(press({ code: "MetaLeft", key: "Meta", metaKey: true }), false, true),
