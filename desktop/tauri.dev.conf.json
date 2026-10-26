@@ -1,4 +1,9 @@
 {
   "identifier": "app.zephium.dev",
-  "productName": "Zephium Dev"
+  "productName": "Zephium Dev",
+  "plugins": {
+    "updater": {
+      "endpoints": []
+    }
+  }
 }
